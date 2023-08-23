@@ -1,33 +1,54 @@
 #!/bin/bash
 
-# Compilar el programa
-gcc treeGenerate.c -o treeGenerate
+# Compila el programa en C
+gcc programa.c -o flower_program
 
-# Ejecutar el programa en segundo plano y guardar su PID
-./treeGenerate "$@" &
-program_pid=$!
+# Verifica si se proporcionaron los argumentos adecuados
+if [ $# -ne 3 ]; then
+    echo "Uso: $0 <tallos> <flores> <petalos>"
+    exit 1
+fi
 
-# Esperar un poco para que los procesos se creen
-sleep 10
+tallos=$1
+flores=$2
+petalos=$3
 
-echo "Árbol de procesos antes de matar procesos:"
-pstree -p $program_pid
+# Ejecuta el programa en C con los argumentos proporcionados en segundo plano
+./flower_program "$tallos" "$flores" "$petalos" &
 
-# Función para matar procesos de hojas a raíz
-kill_tree() {
-    local parent_pid=$1
-    local children=$(pgrep -P $parent_pid)
+# Espera un poco para que los procesos tengan tiempo de ejecutarse
+sleep 2
 
-    #for child_pid in $children; do
-        #kill_tree $child_pid
-    #done
+# Obtén el PID del proceso principal del programa en C
+main_pid=$!
 
-    echo "Matando proceso: $parent_pid"
-    #kill -9 $parent_pid
-}
+# Muestra el árbol de procesos antes de eliminar los pétalos
+echo "Árbol de procesos antes de eliminar los pétalos:"
+pstree -p $main_pid
 
-# Llamar a la función para matar los procesos
-kill_tree $program_pid
+# Calcula el número total de procesos de tallos y flores
+total_processes=$((tallos + (2 * flores)))
+total_tallo_flor=$((tallos + (flores)))
 
-echo "Árbol de procesos después de matar procesos:"
-pstree -p $program_pid
+# Obtén los PIDs de los procesos de las "flores" utilizando pstree y awk
+flower_pids=$(pstree -p $main_pid | grep -oP 'flower_program\(\K\d+(?=\))' | awk 'NR > '$total_tallo_flor' && NR <= '$total_processes'')
+
+echo "Flower PIDs: $flower_pids"
+sleep 1
+# Itera a través de los PIDs de las "flores" y termina los procesos de los "pétalos"
+for flower_pid in $flower_pids; do
+    kill -9 "$flower_pid"
+done
+
+# Espera un poco para que los procesos de los pétalos sean terminados
+sleep 2
+
+# Muestra el árbol de procesos después de eliminar los pétalos
+echo "Árbol de procesos después de eliminar los pétalos:"
+pstree -p $main_pid
+
+
+steam_pids=$(pstree -p $main_pid | grep -oP 'flower_program\(\K\d+(?=\))' | awk 'NR > '$total_tallo_flor' && NR <= '$total_processes'')
+
+# Limpia el archivo ejecutable
+rm flower_program

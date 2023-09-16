@@ -1,0 +1,7 @@
+*
+!/**/
+!*.c
+!*.sh
+!*.java
+!*.md
+!.gitignore

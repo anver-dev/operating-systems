@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Compila el programa en C
-gcc programa.c -o flower_program
+gcc flower.c -o flower_program
 
 if [ $# -ne 3 ]; then
     echo "Uso: $0 <tallos> <flores> <petalos>"

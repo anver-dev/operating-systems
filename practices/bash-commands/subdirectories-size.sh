@@ -15,14 +15,26 @@ human_readable_size() {
     fi
 }
 
+# Función para iterar a través de los directorios y mostrar tamaños
+get_directory_sizes() {
+    local dir=$1
+
+    size=$(du -s "$dir" | cut -f1)
+    readable_size=$(human_readable_size $size)
+    echo "Tamaño de '$dir': $readable_size"
+
+    subdirectories=$(find "$dir" -maxdepth 1 -mindepth 1 -type d)
+    for subdir in $subdirectories; do
+        get_directory_sizes "$subdir"
+    done
+}
+
 # Obtener la lista de directorios en la ruta actual
 directories=$(find . -maxdepth 1 -type d)
 
 # Iterar a través de los directorios y mostrar el tamaño en unidades legibles por personas
 for dir in $directories; do
     if [ "$dir" != "." ]; then
-        size=$(du -s "$dir" | cut -f1)
-        readable_size=$(human_readable_size $size)
-        echo "Tamaño de '$dir': $readable_size"
+        get_directory_sizes "$dir"
     fi
 done

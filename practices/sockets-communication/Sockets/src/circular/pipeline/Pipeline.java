@@ -9,18 +9,15 @@ import java.net.Socket;
 
 public class Pipeline {
     private static ServerSocket serverSocket;
-    private static String HOSTNAME = "localhost";
-    private static int BASE_PORT = 4000;
-    private static int ID_PIPELINE;
-
 
     public static void main(String[] args) throws InterruptedException {
-        ID_PIPELINE = Integer.parseInt(args[0]);
+        int ID_PIPELINE = Integer.parseInt(args[0]);
         int totalProcess = Integer.parseInt(args[1]);
         int message = generateRandomValue();
         int messageToSend = message;
         int suma = 0;
 
+        int BASE_PORT = 4000;
         int port = BASE_PORT + ID_PIPELINE;
 
         try {
@@ -36,7 +33,8 @@ public class Pipeline {
             int nextPort = BASE_PORT + ((ID_PIPELINE + 1) % totalProcess);
             try {
                 enviar(messageToSend, nextPort);
-                int received = recibir();
+                int received = receive();
+
                 suma = suma + received;
                 messageToSend = received;
             } catch (IOException e) {
@@ -51,16 +49,16 @@ public class Pipeline {
         return (int) (Math.random() * 10 + 1);
     }
 
-    private static int recibir() {
+    private static int receive() {
         try {
             Socket clienteSocket = serverSocket.accept();
 
-            BufferedReader entrada = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
-            String mensajeCliente = entrada.readLine();
+            BufferedReader input = new BufferedReader(new InputStreamReader(clienteSocket.getInputStream()));
+            String clientMessage = input.readLine();
 
             clienteSocket.close();
 
-            return Integer.parseInt(mensajeCliente);
+            return Integer.parseInt(clientMessage);
         } catch (IOException e) {
             System.out.println("Error " + e.getMessage());
             return 0;
@@ -68,10 +66,10 @@ public class Pipeline {
     }
 
     public static void enviar(int message, int nextProcess) throws IOException {
+        String HOSTNAME = "localhost";
         Socket socket = new Socket(HOSTNAME, nextProcess);
 
         PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
         output.println(message);
-
     }
 }

@@ -26,7 +26,9 @@ public class ServerMultiThread implements Runnable {
                 errorMessage.setResponse("ERROR: Ya existe un cliente con el nickname ingresado, intenta nuevamente.");
                 output.writeObject(errorMessage);
             } else {
-                clientsConnected.add(clientMessage.getNickname());
+                synchronized (this) {
+                    clientsConnected.add(clientMessage.getNickname());
+                }
 
                 ServerMessage serverMessage = new ServerMessage();
 
@@ -70,7 +72,9 @@ public class ServerMultiThread implements Runnable {
     }
 
     private boolean clientIsLogged(String nickname) {
-        return clientsConnected.contains(nickname);
+        synchronized (this) {
+            return clientsConnected.contains(nickname);
+        }
     }
 
     public ServerMultiThread(Socket socket) {

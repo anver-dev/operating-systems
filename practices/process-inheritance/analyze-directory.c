@@ -8,17 +8,21 @@
 #include <unistd.h>
 #include <time.h> // Para trabajar con fechas y horas
 
-void print_file_info(const char *path) {
+int totalChildProcess = 0;
+
+void print_file_info(const char *path)
+{
     struct stat file_stat;
-    
-    if (stat(path, &file_stat) == -1) {
+
+    if (stat(path, &file_stat) == -1)
+    {
         perror("Error al obtener información del archivo");
     }
 
     printf("%-25s: %s\n", "Nombre", path);
     printf("%-26s: %ld bytes\n", "Tamaño", (long)file_stat.st_size);
     printf("%-25s: %s\n", "Tipo", S_ISDIR(file_stat.st_mode) ? "Directorio" : "Archivo");
-    
+
     printf("%-25s: ", "Permisos");
     printf((file_stat.st_mode & S_IRUSR) ? "r" : "-");
     printf((file_stat.st_mode & S_IWUSR) ? "w" : "-");
@@ -41,29 +45,35 @@ void print_file_info(const char *path) {
     printf("------------------------------------------------------------------------\n");
 }
 
-void explore_directory(const char *dir_path) {
+void explore_directory(const char *dir_path)
+{
     int v;
     DIR *dir;
     struct dirent *entry;
 
     dir = opendir(dir_path);
 
-    if (!dir) {
+    if (!dir)
+    {
         perror("opendir");
         return;
     }
 
-    while ((entry = readdir(dir))) {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
-            continue; // Ignorar . y ..
+    while ((entry = readdir(dir)))
+    {
+        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+        {
+            continue;
         }
 
         char entry_path[512];
         snprintf(entry_path, sizeof(entry_path), "%s/%s", dir_path, entry->d_name);
 
         // Si es un directorio crea un proceso para analizarlo sino imprime informacion del archivo
-        if (entry->d_type == DT_DIR) {
-            if (!fork()) {
+        if (entry->d_type == DT_DIR)
+        {
+            if (!fork())
+            {
                 printf("----------------------------------------\n");
                 printf("PROCESO PID :: {%d}\n", getpid());
                 printf("ANALIZANDO PATH :: {%s}\n", entry_path);
@@ -71,9 +81,10 @@ void explore_directory(const char *dir_path) {
                 explore_directory(entry_path);
                 exit(0);
             }
-            wait(&v);
-        } else {
-            // Es un archivo, muestra la información
+            totalChildProcess++;
+        }
+        else
+        {
             print_file_info(entry_path);
         }
     }
@@ -81,15 +92,33 @@ void explore_directory(const char *dir_path) {
     closedir(dir);
 }
 
-int main(int argc, char *argv[]) {
-    if (argc != 2) {
+int main(int argc, char *argv[])
+{
+    int v;
+    if (argc != 2)
+    {
         fprintf(stderr, "Uso: %s <ruta_del_directorio>\n", argv[0]);
         return 1;
     }
 
-    printf("SOY EL PROCESO PADRE PID :: {%d}\n",getpid());
+    int root = getpid();
+
+    printf("SOY EL PROCESO PADRE PID :: {%d}\n", getpid());
     const char *dir_path = argv[1];
     explore_directory(dir_path);
 
-    return 0;
+    if (root == getpid())
+    {
+        printf("########################################\n");
+        printf("TOTAL DE PROCESOS HIJOS CREADOS :: {%d}\n", totalChildProcess);
+        printf("########################################\n");
+        for (int i = 0; i < totalChildProcess; i++)
+        {
+            wait(&v);
+        }
+
+        exit(0);
+    } else {
+        exit(1);
+    }
 }

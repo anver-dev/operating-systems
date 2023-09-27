@@ -8,7 +8,7 @@ int main (int argc, char *argv[])
 {
     int nivel = atoi(argv[1]);
 
-    int i, j, raiz, v1, v2;
+    int i, j, raiz, v1, v2, v3;
 
     raiz = getpid();
 
@@ -26,11 +26,14 @@ int main (int argc, char *argv[])
 
     sleep(3);
 
-    for (j = nivel - 1; j > 0; j -= 2) {
-        for (i = 0; i < j; i++) {
-            wait(&v1);
-            wait(&v2);
-        }
+
+    if(i == 0) {
+        wait(&v1);
+        wait(&v2);
+    }
+
+    if(i > 0) {
+        wait(&v1);
     }
 
     if (raiz == getpid()) {

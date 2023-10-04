@@ -8,6 +8,8 @@
 #include <unistd.h>
 #include <time.h> // Para trabajar con fechas y horas
 
+#define MAX_PATH_LENGTH 512
+
 int totalChildProcess = 0;
 
 void print_file_info(const char *path)
@@ -45,80 +47,74 @@ void print_file_info(const char *path)
     printf("------------------------------------------------------------------------\n");
 }
 
-void explore_directory(const char *dir_path)
-{
-    int v;
-    DIR *dir;
-    struct dirent *entry;
-
-    dir = opendir(dir_path);
-
-    if (!dir)
-    {
-        perror("opendir");
-        return;
-    }
-
-    while ((entry = readdir(dir)))
-    {
-        if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
-        {
-            continue;
-        }
-
-        char entry_path[512];
-        snprintf(entry_path, sizeof(entry_path), "%s/%s", dir_path, entry->d_name);
-
-        // Si es un directorio crea un proceso para analizarlo sino imprime informacion del archivo
-        if (entry->d_type == DT_DIR)
-        {
-            if (!fork())
-            {
-                printf("----------------------------------------\n");
-                printf("PROCESO PID :: {%d}\n", getpid());
-                printf("ANALIZANDO PATH :: {%s}\n", entry_path);
-                printf("----------------------------------------\n");
-                explore_directory(entry_path);
-                exit(0);
-            }
-            totalChildProcess++;
-        }
-        else
-        {
-            print_file_info(entry_path);
-        }
-    }
-
-    closedir(dir);
-}
-
 int main(int argc, char *argv[])
 {
-    int v;
-    if (argc != 2)
-    {
+    if (argc != 2) {
         fprintf(stderr, "Uso: %s <ruta_del_directorio>\n", argv[0]);
         return 1;
     }
 
-    int root = getpid();
-
-    printf("SOY EL PROCESO PADRE PID :: {%d}\n", getpid());
     const char *dir_path = argv[1];
-    explore_directory(dir_path);
+    DIR *dir = opendir(dir_path);
 
-    if (root == getpid())
-    {
-        printf("########################################\n");
-        printf("TOTAL DE PROCESOS HIJOS CREADOS :: {%d}\n", totalChildProcess);
-        printf("########################################\n");
-        for (int i = 0; i < totalChildProcess; i++)
-        {
-            wait(&v);
+    if (!dir) {
+        perror("opendir");
+        return 1;
+    }
+
+    char *stack[MAX_PATH_LENGTH]; // Pila para rastrear los directorios
+    int stack_size = 0;
+    stack[stack_size++] = strdup(dir_path);
+
+    while (stack_size > 0) {
+        const char *current_dir = stack[--stack_size];
+
+        printf("Explorando directorio: %s\n", current_dir);
+
+        struct dirent *entry;
+        dir = opendir(current_dir);
+
+        while ((entry = readdir(dir))) {
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) {
+                continue;
+            }
+
+            char entry_path[MAX_PATH_LENGTH];
+            snprintf(entry_path, sizeof(entry_path), "%s/%s", current_dir, entry->d_name);
+
+            struct stat file_stat;
+            if (stat(entry_path, &file_stat) == -1) {
+                perror("Error al obtener información del archivo");
+                continue;
+            }
+
+            if (S_ISDIR(file_stat.st_mode)) {
+                // Si es un directorio, lo agregamos a la pila y creamos un proceso hijo
+                stack[stack_size++] = strdup(entry_path);
+                totalChildProcess++;
+
+                if (!fork())
+                {
+                    printf("----------------------------------------\n");
+                    printf("PROCESO PID :: {%d}\n", getpid());
+                    printf("ANALIZANDO PATH :: {%s}\n", entry_path);
+                    printf("----------------------------------------\n");
+                    closedir(dir); // Cerrar el directorio en el proceso hijo
+                    continue; // Volver al bucle while para el nuevo proceso hijo
+                }
+            } else {
+                print_file_info(entry_path);
+            }
         }
 
-        exit(0);
-    } else {
-        exit(1);
+        closedir(dir);
     }
+
+    // Esperar a que todos los procesos hijos terminen
+    while (totalChildProcess > 0) {
+        wait(NULL);
+        totalChildProcess--;
+    }
+
+    return 0;
 }

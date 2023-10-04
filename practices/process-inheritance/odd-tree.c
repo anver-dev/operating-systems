@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     int nivel = atoi(argv[1]);
 
@@ -12,28 +12,36 @@ int main (int argc, char *argv[])
 
     raiz = getpid();
 
-    for (j = nivel - 1; j > 0; j -= 2) { 
-        if (fork()) { 
+    for (j = nivel - 1; j > 0; j -= 2)
+    {
+        if (fork())
+        {
             break;
         }
     }
 
-    for (i = 0; i < j; i++) {
-        if (fork()) { 
+    for (i = 0; i < j; i++)
+    {
+        if (fork())
+        {
             break;
         }
     }
 
     sleep(3);
 
-
-    if(i == 0) {
-        wait(&v1);
-        wait(&v2);
+    if (i == j) {
+        exit(1);
     }
 
-    if(i > 0) {
+    if (i > 0) {
         wait(&v1);
+        exit(WEXITSTATUS(v1) + 1);
+    }
+
+    if (i == 0) {
+        wait(&v1);
+        wait(&v2);
     }
 
     if (raiz == getpid()) {
